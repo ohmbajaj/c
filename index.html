@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroTune - Personalized Playlists</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #ff4c4c;
+            --primary-shadow: #ff1a1a;
+            --secondary-color: #ff9999;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --loader-color: #ff9800;
+            --sp: 2.5s;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #ffe0b5;
+            --text-color: #000;
+            --primary-color: #a991b1;
+            --primary-shadow: #a991b1;
+            --secondary-color: #8e65a5;
+            --card-bg: rgba(0, 0, 0, 0.05);
+            --loader-color: #a991b1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Oswald', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* Intro Animation */
+        .intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeOut 1s ease-out 3.5s forwards;
+        }
+
+        .intro-logo {
+            font-size: 6rem;
+            font-weight: 900;
+            color: var(--primary-color);
+            text-shadow: 0 0 30px var(--primary-shadow);
+            transform: scale(0.5);
+            opacity: 0;
+            animation: logoEntrance 2s ease-out 0.5s forwards;
+        }
+
+        @keyframes logoEntrance {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; visibility: visible; }
+            100% { opacity: 0; visibility: hidden; }
+        }
+
+        /* Main Content */
+        .main-content {
+            opacity: 0;
+            animation: fadeIn 1s ease-in 4s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* Loader Styles */
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .loader-content {
+            width: 50vmin;
+            height: 50vmin;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: scale(0.65);
+            animation: spin-all calc(var(--sp) * 2) linear 0s infinite;
+        }
+
+        .loader-circle {
+            --in: 80%;
+            --ar: var(--loader-color);
+            --dt: var(--loader-color);
+            --shadow: drop-shadow(0vmin 0vmin 0.5vmin #000) drop-shadow(0vmin 1vmin 0.5vmin #0004);
+            --cross: linear-gradient(0deg, #fff0 calc(50% - 2px), #000 calc(50% - 1px) calc(50% + 1px), #fff0 calc(50% + 2px)), 
+                     linear-gradient(90deg, #fff0 calc(50% - 2px), #000 calc(50% - 1px) calc(50% + 1px), #fff0 calc(50% + 2px));
+            border: 6vmin solid var(--ar);
+            width: var(--in);
+            height: var(--in);
+            border-radius: 100%;
+            position: absolute;
+            box-sizing: border-box;
+            border-top-color: #fff0;
+            border-left-color: #fff0;
+            top: 15vmin;
+            right: -10vmin;
+            animation: spin-bot var(--sp) ease 0s infinite;
+            background-image: var(--cross), radial-gradient(var(--dt) 5.5vmin, #fff0 calc(5.5vmin + 1px));
+            background-repeat: no-repeat;
+            background-size: 3vmin 1vmin, 1vmin 3vmin, 100% 100%;
+            background-position: center center;
+            filter: var(--shadow);
+        }
+
+        .loader-circle:nth-child(2) {
+            --in: 60%;
+            top: -2vmin;
+            animation: spin-top var(--sp) ease 0s infinite;
+            transform: rotate(-45deg);
+            background-image: var(--cross), radial-gradient(var(--dt) 1.25vmin, #fff0 calc(1.25vmin + 1px));
+            right: -4vmin;
+            filter: hue-rotate(10deg) var(--shadow);
+            background-size: 1.4vmin 1vmin, 1vmin 1.4vmin, 100% 100%;
+        }
+
+        .loader-circle:nth-child(3) {
+            --in: 100%;
+            top: -5vmin;
+            left: -13vmin;
+            transform: rotate(175deg);
+            animation: spin-left var(--sp) ease calc(var(--sp) / 4) infinite;
+            background-image: var(--cross), radial-gradient(var(--dt) 9vmin, #fff0 calc(9vmin + 1px));
+            filter: hue-rotate(20deg) var(--shadow);
+            background-size: 5vmin 1vmin, 1vmin 5vmin, 100% 100%;
+        }
+
+        .loader-circle:nth-child(4) {
+            --in: 60%;
+            top: 35vmin;
+            left: -6vmin;
+            transform: rotate(-280deg);
+            animation: spin-last var(--sp) ease calc(calc(calc(var(--sp) / 4) + var(--sp)) * -1) infinite;
+            background-image: var(--cross), radial-gradient(var(--dt) 2.5vmin, #fff0 calc(2.5vmin + 1px));
+            filter: hue-rotate(30deg) var(--shadow);
+            background-size: 2vmin 1vmin, 1vmin 2vmin, 100% 100%;
+        }
+
+        @keyframes spin-all {
+            0% { transform: rotate(0deg) scale(0.65); }
+            100% { transform: rotate(360deg) scale(0.65); }
+        }
+
+        @keyframes spin-top {
+            0% { transform: rotate(-45deg); }
+            100% { transform: rotate(315deg); }
+        }
+
+        @keyframes spin-bot {
+            0%, 35% { transform: rotate(0deg); }
+            80%, 100% { transform: rotate(-360deg); }
+        }
+
+        @keyframes spin-left {
+            0%, 35% { transform: rotate(175deg); }
+            80%, 100% { transform: rotate(535deg); }
+        }
+
+        @keyframes spin-last {
+            0%, 10% { transform: rotate(-280deg); }
+            90%, 100% { transform: rotate(-640deg); }
+        }
+
+        .loader-text {
+            color: white;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            font-family: 'Oswald', sans-serif;
+            text-align: center;
+        }
+
+        /* Main Content Styles */
+        a-waves {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        a-waves::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0.5rem;
+            height: 0.5rem;
+            background: #ffffff20;
+            border-radius: 50%;
+            transform: translate3d(var(--x, -0.5rem), var(--y, 50%), 0);
+            will-change: transform;
+        }
+
+        a-waves svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        a-waves svg path {
+            fill: none;
+            stroke: var(--primary-color);
+            stroke-width: 1px;
+            opacity: 0.3;
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5vh 0;
+            text-align: center;
+        }
+
+        .hero-section {
+            padding: 8vh 0 6vh;
+        }
+
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            text-shadow: 0 0 20px var(--primary-shadow);
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            color: var(--secondary-color);
+            margin-bottom: 4rem;
+            opacity: 0.9;
+        }
+
+        .top-genres {
+            margin-bottom: 4rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+            text-align: left;
+            text-shadow: 0 0 10px var(--primary-shadow);
+        }
+
+        .genre-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .genre-card {
+            background: var(--card-bg);
+            border: 1px solid var(--primary-shadow);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 8px 25px rgba(255, 26, 26, 0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .genre-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(255, 26, 26, 0.5);
+            border-color: var(--primary-color);
+        }
+
+        .genre-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 76, 76, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .genre-card:hover::before {
+            left: 100%;
+        }
+
+        .genre-icon {
+            width: 100%;
+            height: 180px;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.9);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .genre-title {
+            font-size: 1.4rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .genre-description {
+            color: #ccc;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+
+        .genre-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+        }
+
+        /* Genre Colors */
+        .genre-card:nth-child(1) .genre-icon { background: linear-gradient(135deg, #ff6b6b, #ff5252); }
+        .genre-card:nth-child(2) .genre-icon { background: linear-gradient(135deg, #4ecdc4, #26a69a); }
+        .genre-card:nth-child(3) .genre-icon { background: linear-gradient(135deg, #45b7d1, #2196f3); }
+        .genre-card:nth-child(4) .genre-icon { background: linear-gradient(135deg, #96ceb4, #4caf50); }
+        .genre-card:nth-child(5) .genre-icon { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); }
+        .genre-card:nth-child(6) .genre-icon { background: linear-gradient(135deg, #dda0dd, #9c27b0); }
+        .genre-card:nth-child(7) .genre-icon { background: linear-gradient(135deg, #ff7675, #e17055); }
+        .genre-card:nth-child(8) .genre-icon { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+        .genre-card:nth-child(9) .genre-icon { background: linear-gradient(135deg, #fd79a8, #e84393); }
+
+        .categories {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .category-chip {
+            padding: 1rem 2rem;
+            background: rgba(255, 76, 76, 0.1);
+            border: 2px solid var(--primary-color);
+            border-radius: 2rem;
+            color: var(--primary-color);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .category-chip:hover {
+            background: rgba(255, 76, 76, 0.2);
+            transform: scale(1.1);
+        }
+
+        .questionnaire {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            margin-top: 2rem;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+            overflow: hidden;
+            max-height: 0;
+        }
+
+        .questionnaire.active {
+            display: flex;
+            max-height: 500px;
+            padding: 2rem;
+        }
+
+        .question {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            color: var(--text-color);
+        }
+
+        .input-field {
+            width: 80%;
+            padding: 0.5rem 0;
+            margin-bottom: 1rem;
+            border: none;
+            border-bottom: 2px solid var(--primary-color);
+            font-size: 1rem;
+            color: #fff;
+            background: transparent;
+            font-family: 'Oswald', sans-serif;
+            outline: none;
+        }
+
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .submit-btn {
+            padding: 0.8rem 2rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 2rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            font-family: 'Oswald', sans-serif;
+        }
+
+        .submit-btn:hover {
+            background: var(--primary-shadow);
+            transform: scale(1.05);
+        }
+
+        .trending-playlists {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2rem;
+        }
+
+        .trending-playlists.active {
+            display: flex;
+        }
+
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .playlist-cover {
+            width: 50px;
+            height: 50px;
+            margin-right: 1rem;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .playlist-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .playlist-link:hover {
+            text-decoration: underline;
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255, 76, 76, 0.4);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .floating-action:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(255, 76, 76, 0.6);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(52, 152, 219, 0.5);
+            transition: all 0.3s ease;
+            z-index: 100;
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.7);
+        }
+
+        @media (max-width: 768px) {
+            .intro-logo {
+                font-size: 4rem;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .subtitle {
+                font-size: 1.1rem;
+            }
+            
+            .genre-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .categories {
+                gap: 1rem;
+            }
+
+            .theme-toggle {
+                top: 1rem;
+                right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Intro Animation -->
+    <div class="intro-overlay">
+        <div class="intro-logo">NeuroTune</div>
+    </div>
+
+    <!-- Loader Overlay -->
+    <div class="loader-overlay">
+        <div class="loader-content">
+            <div class="loader-circle"></div>
+            <div class="loader-circle"></div>
+            <div class="loader-circle"></div>
+            <div class="loader-circle"></div>
+        </div>
+        <div class="loader-text">Creating your personalized playlist...</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <a-waves><svg class="js-svg"></svg></a-waves>
+
+        <div class="container">
+            <div class="hero-section">
+                <h1>NeuroTune</h1>
+                <p class="subtitle">Your AI-powered music companion for personalized listening experiences</p>
+            </div>
+
+            <div class="categories">
+                <div class="category-chip" onclick="showArtistQuestionnaire()">🎸 By Artist</div>
+                <div class="category-chip" onclick="showMoodQuestionnaire()">🎭 Mood Based</div>
+                <div class="category-chip" onclick="showTrendingPlaylists()">🎵 Trending</div>
+            </div>
+
+            <div id="artist-questionnaire" class="questionnaire">
+                <div class="question">Make a playlist based on your favourite artists</div>
+                <input type="text" class="input-field" placeholder="Enter your favourite artists">
+                <button class="submit-btn" onclick="submitArtistQuestionnaire()">Generate Playlist</button>
+            </div>
+
+            <div id="mood-questionnaire" class="questionnaire">
+                <div class="question">Describe your theme in a word or a sentence</div>
+                <input type="text" class="input-field" placeholder="Enter theme">
+                <div class="question">Artists you wanna hear</div>
+                <input type="text" class="input-field" placeholder="Enter artists">
+                <div class="question">Artists you wanna avoid</div>
+                <input type="text" class="input-field" placeholder="Enter artists to avoid">
+                <div class="question">Any custom prompt you wanna add</div>
+                <input type="text" class="input-field" placeholder="Enter custom prompt">
+                <button class="submit-btn" onclick="submitMoodQuestionnaire()">Generate Playlist</button>
+            </div>
+
+            <div id="trending-playlists" class="trending-playlists">
+                <div class="playlist-item">
+                    <img src="cover1.jpg" alt="Cover 1" class="playlist-cover">
+                    <a href="https://open.spotify.com/playlist/1" class="playlist-link">Trending Playlist 1</a>
+                </div>
+                <div class="playlist-item">
+                    <img src="cover2.jpg" alt="Cover 2" class="playlist-cover">
+                    <a href="https://open.spotify.com/playlist/2" class="playlist-link">Trending Playlist 2</a>
+                </div>
+            </div>
+
+            <div class="top-genres">
+                <h2 class="section-title">Top 9 Genre Tracks</h2>
+                <div class="genre-grid">
+                    <div class="genre-card">
+                        <div class="genre-icon">🎸</div>
+                        <div class="genre-title">Rock</div>
+                        <div class="genre-description">Classic and modern rock anthems that fuel your energy and rebellion</div>
+                        <div class="genre-stats">
+                            <span>156 tracks</span>
+                            <span>8.2k likes</span>
+                        </div>
+                    </div>
+
+                    <div class="genre-card">
+                        <div class="genre-icon">🎵</div>
+                        <div class="genre-title">Pop</div>
+                        <div class="genre-description">Chart-topping hits and catchy melodies that define contemporary music</div>
+                        <div class="genre-stats">
+                            <span>203 tracks</span>
+                            <span>12.5k likes</span>
+                        </div>
+                    </div>
+
+                    <div class="genre-card">
+                        <div class="genre-icon">🎷</div>
+                        <div class="genre-title">Jazz</div>
+                        <div class="genre-description">Smooth improvisations and timeless classics from jazz legends</div>
+                        <div class="genre-stats">
+                            <span>89 tracks</span>
+                            <span>4.7k likes</span>
+                        </div>
+                    </div>
+
+                    <div class="genre-card">
+                        <div class="genre-icon">🎤</div>
+                        <div class="genre-title">Hip Hop</div>
+                        <div class="genre-description">Beats, rhymes, and urban storytelling that shapes modern culture</div>
+                        <div class="genre-stats">
+                            <span>178 tracks</span>
+                            <span>9.8k likes</span>
+                        </div>
+                    </div>
+
+                    <div class="genre-card">
+                        <div class="genre-icon">🎹</div>
+                        <div class="genre-title">Electronic</div>
+                        <div class="genre-description">Synthesized sounds and digital beats for the future of music</div>
+                        <div class="genre-stats">
+                            <span>134 tracks</span>
+                            <span>6.3k likes</span>
+                        </div>
+                    </div>
+
+                    <div class="genre-card">
+                        <div class="genre-icon">🎻</div>
+                        <div class="genre-title">Classical</div>
+                        <div class="genre-description">Timeless orchestral masterpieces that transcend generations</div>
+                        <div class="genre-stats">
+                            <span>67 tracks</span>
+                            <span>3.1k likes</span>
+                        </div>
+                    </div>
+
+                    <div class="genre-card">
+                        <div class="genre-icon">🏴</div>
+                        <div class="genre-title">Alternative</div>
+                        <div class="genre-description">Independent and alternative sounds that break conventional boundaries</div>
+                        <div class="genre-stats">
+                            <span>112 tracks</span>
+                            <span>5.9k likes</span>
+                        </div>
+                    </div>
+
+                    <div class="genre-card">
+                        <div class="genre-icon">🌊</div>
+                        <div class="genre-title">Reggae</div>
+                        <div class="genre-description">Island rhythms and conscious lyrics that promote peace and unity</div>
+                        <div class="genre-stats">
+                            <span>78 tracks</span>
+                            <span>4.2k likes</span>
+                        </div>
+                    </div>
+
+                    <div class="genre-card">
+                        <div class="genre-icon">🔥</div>
+                        <div class="genre-title">Latin</div>
+                        <div class="genre-description">Passionate rhythms and vibrant melodies from Latin America</div>
+                        <div class="genre-stats">
+                            <span>145 tracks</span>
+                            <span>7.6k likes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="floating-action" onclick="showCreatePlaylist()">+</button>
+        <div class="theme-toggle" onclick="toggleTheme()"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/noisejs@2.1.0/index.min.js"></script>
+    <script>
+        // Helper functions
+        function showCreatePlaylist() {
+            alert("Create custom playlist feature coming soon! 🎵");
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            body.setAttribute('data-theme', newTheme);
+            
+            // Update loader color based on theme
+            document.documentElement.style.setProperty('--loader-color', newTheme === 'light' ? '#a991b1' : '#ff9800');
+        }
+
+        // Questionnaire functions
+        function showArtistQuestionnaire() {
+            document.getElementById('mood-questionnaire').classList.remove('active');
+            document.getElementById('trending-playlists').classList.remove('active');
+            document.getElementById('artist-questionnaire').classList.toggle('active');
+        }
+
+        function showMoodQuestionnaire() {
+            document.getElementById('artist-questionnaire').classList.remove('active');
+            document.getElementById('trending-playlists').classList.remove('active');
+            document.getElementById('mood-questionnaire').classList.toggle('active');
+        }
+
+        function showTrendingPlaylists() {
+            document.getElementById('artist-questionnaire').classList.remove('active');
+            document.getElementById('mood-questionnaire').classList.remove('active');
+            document.getElementById('trending-playlists').classList.toggle('active');
+        }
+
+        function submitArtistQuestionnaire() {
+            const input = document.querySelector('#artist-questionnaire .input-field');
+            if (input.value.trim() === '') {
+                alert('Please enter at least one artist');
+                return;
+            }
+            
+            showLoader();
+            
+            // Simulate API call
+            setTimeout(() => {
+                hideLoader();
+                alert(`Playlist generated based on artist: ${input.value}`);
+            }, 3000);
+        }
+
+        function submitMoodQuestionnaire() {
+            const inputs = document.querySelectorAll('#mood-questionnaire .input-field');
+            const theme = inputs[0].value.trim();
+            
+            if (theme === '') {
+                alert('Please describe your theme');
+                return;
+            }
+            
+            showLoader();
+            
+            // Simulate API call
+            setTimeout(() => {
+                hideLoader();
+                alert(`Playlist generated based on mood: ${theme}`);
+            }, 3000);
+        }
+
+        // Loader functions
+        function showLoader() {
+            document.querySelector('.loader-overlay').style.display = 'flex';
+        }
+
+        function hideLoader() {
+            document.querySelector('.loader-overlay').style.display = 'none';
+        }
+
+        // Add click effects to genre cards
+        document.querySelectorAll('.genre-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const title = this.querySelector('.genre-title').textContent;
+                alert(`Loading "${title}" genre tracks... 🎵`);
+            });
+        });
+
+        // Add click effects to category chips
+        document.querySelectorAll('.category-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                // Remove active state from all chips
+                document.querySelectorAll('.category-chip').forEach(c => c.style.background = 'rgba(255, 76, 76, 0.1)');
+                // Add active state to clicked chip
+                this.style.background = 'rgba(255, 76, 76, 0.3)';
+            });
+        });
+
+        // Waves animation class
+        class AWaves extends HTMLElement {
+            connectedCallback() {
+                this.svg = this.querySelector('.js-svg');
+                this.mouse = { x: -10, y: 0, lx: 0, ly: 0, sx: 0, sy: 0, v: 0, vs: 0, a: 0, set: false };
+                this.lines = [];
+                this.paths = [];
+                this.noise = new Noise(Math.random());
+                this.setSize();
+                this.setLines();
+                this.bindEvents();
+                requestAnimationFrame(this.tick.bind(this));
+            }
+            bindEvents() {
+                window.addEventListener('resize', this.onResize.bind(this));
+                window.addEventListener('mousemove', this.onMouseMove.bind(this));
+                this.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
+            }
+            onResize() { this.setSize(); this.setLines(); }
+            onMouseMove(e) { this.updateMousePosition(e.pageX, e.pageY); }
+            onTouchMove(e) {
+                const touch = e.touches[0];
+                this.updateMousePosition(touch.clientX, touch.clientY);
+            }
+            updateMousePosition(x, y) {
+                const m = this.mouse;
+                m.x = x - this.bounding.left;
+                m.y = y - this.bounding.top + window.scrollY;
+                if (!m.set) {
+                    m.sx = m.x; m.sy = m.y; m.lx = m.x; m.ly = m.y; m.set = true;
+                }
+            }
+            setSize() {
+                this.bounding = this.getBoundingClientRect();
+                this.svg.setAttribute('width', this.bounding.width);
+                this.svg.setAttribute('height', this.bounding.height);
+            }
+            setLines() {
+                const { width, height } = this.bounding;
+                this.lines = [];
+                this.paths.forEach(p => p.remove());
+                this.paths = [];
+                const xGap = 10, yGap = 32;
+                const oWidth = width + 200, oHeight = height + 30;
+                const totalLines = Math.ceil(oWidth / xGap);
+                const totalPoints = Math.ceil(oHeight / yGap);
+                const xStart = (width - xGap * totalLines) / 2;
+                const yStart = (height - yGap * totalPoints) / 2;
+                for (let i = 0; i <= totalLines; i++) {
+                    const points = [];
+                    for (let j = 0; j <= totalPoints; j++) {
+                        points.push({ x: xStart + xGap * i, y: yStart + yGap * j, wave: { x: 0, y: 0 }, cursor: { x: 0, y: 0, vx: 0, vy: 0 } });
+                    }
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.classList.add('js-line');
+                    this.svg.appendChild(path);
+                    this.paths.push(path);
+                    this.lines.push(points);
+                }
+            }
+            movePoints(t) {
+                const m = this.mouse, n = this.noise;
+                this.lines.forEach(points => {
+                    points.forEach(p => {
+                        const move = n.perlin2((p.x + t * 0.0125) * 0.002, (p.y + t * 0.005) * 0.0015) * 12;
+                        p.wave.x = Math.cos(move) * 32;
+                        p.wave.y = Math.sin(move) * 16;
+                        const dx = p.x - m.sx, dy = p.y - m.sy, d = Math.hypot(dx, dy), l = Math.max(175, m.vs);
+                        if (d < l) {
+                            const s = 1 - d / l, f = Math.cos(d * 0.001) * s;
+                            p.cursor.vx += Math.cos(m.a) * f * l * m.vs * 0.00065;
+                            p.cursor.vy += Math.sin(m.a) * f * l * m.vs * 0.00065;
+                        }
+                        p.cursor.vx += (0 - p.cursor.x) * 0.005;
+                        p.cursor.vy += (0 - p.cursor.y) * 0.005;
+                        p.cursor.vx *= 0.925;
+                        p.cursor.vy *= 0.925;
+                        p.cursor.x += p.cursor.vx * 2;
+                        p.cursor.y += p.cursor.vy * 2;
+                        p.cursor.x = Math.min(100, Math.max(-100, p.cursor.x));
+                        p.cursor.y = Math.min(100, Math.max(-100, p.cursor.y));
+                    });
+                });
+            }
+            moved(p, cursor = true) {
+                return {
+                    x: Math.round((p.x + p.wave.x + (cursor ? p.cursor.x : 0)) * 10) / 10,
+                    y: Math.round((p.y + p.wave.y + (cursor ? p.cursor.y : 0)) * 10) / 10
+                };
+            }
+            drawLines() {
+                this.lines.forEach((points, i) => {
+                    let d = `M ${this.moved(points[0], false).x} ${this.moved(points[0], false).y}`;
+                    points.forEach(p => {
+                        const mp = this.moved(p);
+                        d += ` L ${mp.x} ${mp.y}`;
+                    });
+                    this.paths[i].setAttribute('d', d);
+                });
+            }
+            tick(t) {
+                const m = this.mouse;
+                m.sx += (m.x - m.sx) * 0.1;
+                m.sy += (m.y - m.sy) * 0.1;
+                const dx = m.x - m.lx, dy = m.y - m.ly, d = Math.hypot(dx, dy);
+                m.v = d;
+                m.vs += (d - m.vs) * 0.1;
+                m.vs = Math.min(100, m.vs);
+                m.lx = m.x;
+                m.ly = m.y;
+                m.a = Math.atan2(dy, dx);
+                this.style.setProperty('--x', `${m.sx}px`);
+                this.style.setProperty('--y', `${m.sy}px`);
+                this.movePoints(t);
+                this.drawLines();
+                requestAnimationFrame(this.tick.bind(this));
+            }
+        }
+
+        customElements.define('a-waves', AWaves);
+
+        // Set initial theme based on user preference
+        const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDarkMode) {
+            document.body.setAttribute('data-theme', 'dark');
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+        }
+    </script>
+</body>
+</html>
