@@ -540,6 +540,105 @@
             box-shadow: 0 4px 15px rgba(52, 152, 219, 0.7);
         }
 
+        /* Playlist Results Styles */
+        .playlist-results {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin: 2rem auto;
+            box-shadow: 0 8px 25px rgba(255, 26, 26, 0.3);
+            max-width: 800px;
+        }
+
+        .playlist-results h3 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+
+        .tracks-list {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+        }
+
+        .track-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .track-item:hover {
+            background: rgba(255, 76, 76, 0.1);
+        }
+
+        .track-number {
+            color: var(--secondary-color);
+            font-weight: bold;
+            min-width: 2rem;
+            text-align: right;
+        }
+
+        .track-image {
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            object-fit: cover;
+        }
+
+        .track-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .track-name {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-artist {
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+
+        .track-preview {
+            width: 150px;
+            height: 30px;
+        }
+
+        .playlist-actions {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .save-playlist-btn {
+            padding: 0.8rem 2rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 2rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Oswald', sans-serif;
+        }
+
+        .save-playlist-btn:hover {
+            background: var(--primary-shadow);
+            transform: scale(1.05);
+        }
+
         @media (max-width: 768px) {
             .intro-logo {
                 font-size: 4rem;
@@ -564,6 +663,15 @@
             .theme-toggle {
                 top: 1rem;
                 right: 1rem;
+            }
+
+            .track-item {
+                flex-wrap: wrap;
+            }
+
+            .track-preview {
+                width: 100%;
+                margin-top: 0.5rem;
             }
         }
     </style>
@@ -629,6 +737,9 @@
                     <a href="https://open.spotify.com/playlist/2" class="playlist-link">Trending Playlist 2</a>
                 </div>
             </div>
+
+            <!-- Playlist Results Container -->
+            <div id="playlist-results-container" style="display: none;"></div>
 
             <div class="top-genres">
                 <h2 class="section-title">Top 9 Genre Tracks</h2>
@@ -766,7 +877,17 @@
             document.getElementById('trending-playlists').classList.toggle('active');
         }
 
-        function submitArtistQuestionnaire() {
+        // Loader functions
+        function showLoader() {
+            document.querySelector('.loader-overlay').style.display = 'flex';
+        }
+
+        function hideLoader() {
+            document.querySelector('.loader-overlay').style.display = 'none';
+        }
+
+        // API-connected functions
+        async function submitArtistQuestionnaire() {
             const input = document.querySelector('#artist-questionnaire .input-field');
             if (input.value.trim() === '') {
                 alert('Please enter at least one artist');
@@ -775,14 +896,33 @@
             
             showLoader();
             
-            // Simulate API call
-            setTimeout(() => {
+            try {
+                const response = await fetch('neurotune_backend.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'generate_by_artist',
+                        artists: input.value.trim()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    displayPlaylistResults(data.tracks, data.playlist_name);
+                }
+            } catch (error) {
+                alert('Failed to generate playlist: ' + error.message);
+            } finally {
                 hideLoader();
-                alert(`Playlist generated based on artist: ${input.value}`);
-            }, 3000);
+            }
         }
 
-        function submitMoodQuestionnaire() {
+        async function submitMoodQuestionnaire() {
             const inputs = document.querySelectorAll('#mood-questionnaire .input-field');
             const theme = inputs[0].value.trim();
             
@@ -793,20 +933,102 @@
             
             showLoader();
             
-            // Simulate API call
-            setTimeout(() => {
+            try {
+                const response = await fetch('neurotune_backend.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'generate_by_mood',
+                        theme: theme,
+                        include_artists: inputs[1].value.trim(),
+                        exclude_artists: inputs[2].value.trim(),
+                        custom_prompt: inputs[3].value.trim()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    displayPlaylistResults(data.tracks, data.playlist_name);
+                }
+            } catch (error) {
+                alert('Failed to generate playlist: ' + error.message);
+            } finally {
                 hideLoader();
-                alert(`Playlist generated based on mood: ${theme}`);
-            }, 3000);
+            }
         }
 
-        // Loader functions
-        function showLoader() {
-            document.querySelector('.loader-overlay').style.display = 'flex';
+        async function createAndSavePlaylist(tracks, playlistName) {
+            showLoader();
+            
+            try {
+                const response = await fetch('neurotune_backend.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'create_playlist',
+                        tracks: tracks,
+                        playlist_name: playlistName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    if (data.auth_url) {
+                        window.location.href = data.auth_url;
+                    } else {
+                        alert(data.error);
+                    }
+                } else {
+                    alert('Playlist created successfully!');
+                    window.open(data.playlist_link, '_blank');
+                }
+            } catch (error) {
+                alert('Failed to create playlist: ' + error.message);
+            } finally {
+                hideLoader();
+            }
         }
 
-        function hideLoader() {
-            document.querySelector('.loader-overlay').style.display = 'none';
+        function displayPlaylistResults(tracks, playlistName) {
+            const resultsHTML = `
+                <div class="playlist-results">
+                    <h3>Your Personalized Playlist: ${playlistName}</h3>
+                    <div class="tracks-list">
+                        ${tracks.map((track, index) => `
+                            <div class="track-item">
+                                <span class="track-number">${index + 1}.</span>
+                                <img src="${track.image}" alt="${track.album}" class="track-image">
+                                <div class="track-info">
+                                    <a href="${track.spotify_url}" class="track-name" target="_blank">${track.name}</a>
+                                    <span class="track-artist">${track.artist}</span>
+                                </div>
+                                ${track.preview_url ? `
+                                    <audio controls class="track-preview">
+                                        <source src="${track.preview_url}" type="audio/mpeg">
+                                    </audio>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="playlist-actions">
+                        <button class="save-playlist-btn" onclick="createAndSavePlaylist(${JSON.stringify(tracks)}, '${playlistName}')">
+                            Save to Spotify
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            const resultsContainer = document.getElementById('playlist-results-container');
+            resultsContainer.innerHTML = resultsHTML;
+            resultsContainer.style.display = 'block';
         }
 
         // Add click effects to genre cards
@@ -820,9 +1042,7 @@
         // Add click effects to category chips
         document.querySelectorAll('.category-chip').forEach(chip => {
             chip.addEventListener('click', function() {
-                // Remove active state from all chips
                 document.querySelectorAll('.category-chip').forEach(c => c.style.background = 'rgba(255, 76, 76, 0.1)');
-                // Add active state to clicked chip
                 this.style.background = 'rgba(255, 76, 76, 0.3)';
             });
         });
